@@ -87,6 +87,16 @@ namespace PracticeProj.Src.Cont
             }
         }
 
+        /// <summary>
+        /// 結果取得
+        /// </summary>
+        /// <param name="sOut"></param>
+        /// <param name="sCond"></param>
+        public override void GetRslt(ref string[] sOut, string sCond)
+        {
+            //MessageBox.Show("\nAaaDmng : GetMdl >");
+        }
+
         //航跡管理セット
         public void SetWakeMng(WakeMng cWakeMng)
         {

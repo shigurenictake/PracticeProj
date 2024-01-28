@@ -59,7 +59,7 @@ namespace PracticeProj.Src
             MessageBox.Show("WakeMng::InitWake");
 
             //mapBoxの初期化
-            //m_cUctrlMap.InitLayerOtherThanBase();
+            m_cUctrlMap.InitLayerOtherThanBase();
 
             //コンフィグを初期化
             InitWakeConfig();

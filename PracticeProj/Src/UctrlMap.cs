@@ -24,6 +24,25 @@ namespace PracticeProj
             this.InitializeMap();
         }
 
+        /// <summary>
+        /// このユーザーコントロールがロードされたときのイベント
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void UctrlMap_Load(object sender, EventArgs e)
+        {
+            // デザイン中は呼び出さない
+            if (this.DesignMode) return;
+        }
+
+        /// <summary>
+        /// MapBox初期化
+        /// </summary>
+        public void ClearMapBox()
+        {
+            //T.B.D.
+        }
+
         //マップ初期化
         private void InitializeMap()
         {
@@ -92,25 +111,6 @@ namespace PracticeProj
             mapBox.Refresh();
         }
 
-        /// <summary>
-        /// このユーザーコントロールがロードされたときのイベント
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void UctrlMap_Load(object sender, EventArgs e)
-        {
-            // デザイン中は呼び出さない
-            if (this.DesignMode) return;
-        }
-
-        /// <summary>
-        /// MapBox初期化
-        /// </summary>
-        public void ClearMapBox()
-        {
-            //T.B.D.
-        }
-
         //レイヤ生成
         public void GenerateLayer(string layername)
         {
@@ -164,25 +164,6 @@ namespace PracticeProj
 
         }
 
-        //ラインを追加
-        public void AddLineToLayer(string layername, Coordinate[] coordinates, string userdata)
-        {
-            //レイヤ取得
-            VectorLayer layer = GetVectorLayerByName(layername);
-            //ジオメトリ取得
-            Collection<IGeometry> igeoms = GetIGeometriesAllByVectorLayer(layer);
-            //図形生成クラス
-            GeometryFactory gf = new GeometryFactory();
-            //座標リストの線を生成し、ジオメトリのコレクションに追加
-            ILineString ilinestring = gf.CreateLineString(coordinates);
-            ilinestring.UserData = userdata;
-            //ジオメトリのコレクションに追加
-            igeoms.Add(ilinestring);
-            //ジオメトリをレイヤに反映
-            GeometryProvider gpro = new GeometryProvider(igeoms);
-            layer.DataSource = gpro;
-        }
-
         /// <summary>
         /// レイヤ内の全ジオメトリ（地図上に配置した LineString や Point など）を取得
         /// 範囲:地図全体(経度-180～180, 緯度-90～90で囲まれる四角形)
@@ -226,6 +207,25 @@ namespace PracticeProj
             ipoint.UserData = userdata;
             //ジオメトリのコレクションに追加
             igeoms.Add(ipoint);
+            //ジオメトリをレイヤに反映
+            GeometryProvider gpro = new GeometryProvider(igeoms);
+            layer.DataSource = gpro;
+        }
+
+        //ラインを追加
+        public void AddLineToLayer(string layername, Coordinate[] coordinates, string userdata)
+        {
+            //レイヤ取得
+            VectorLayer layer = GetVectorLayerByName(layername);
+            //ジオメトリ取得
+            Collection<IGeometry> igeoms = GetIGeometriesAllByVectorLayer(layer);
+            //図形生成クラス
+            GeometryFactory gf = new GeometryFactory();
+            //座標リストの線を生成し、ジオメトリのコレクションに追加
+            ILineString ilinestring = gf.CreateLineString(coordinates);
+            ilinestring.UserData = userdata;
+            //ジオメトリのコレクションに追加
+            igeoms.Add(ilinestring);
             //ジオメトリをレイヤに反映
             GeometryProvider gpro = new GeometryProvider(igeoms);
             layer.DataSource = gpro;
