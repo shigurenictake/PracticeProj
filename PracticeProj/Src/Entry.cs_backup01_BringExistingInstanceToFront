@@ -1,0 +1,192 @@
+﻿using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Windows.Forms;
+
+namespace PracticeProj
+{
+    internal static class Entry
+    {
+        // Windows API 関数のインポート
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        [DllImport("user32.dll")]
+        private static extern bool IsIconic(IntPtr hWnd);
+
+
+        [DllImport("user32.dll")]
+        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+
+        [DllImport("user32.dll")]
+        private static extern bool SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+
+
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+
+
+        //[DllImport("user32.dll", SetLastError = true)]
+        //[return: MarshalAs(UnmanagedType.Bool)]
+        //private static extern bool InvalidateRect(IntPtr hWnd, IntPtr lpRect, bool bErase);
+
+        //ウィンドウをアクティブにして表示する設定値
+        private const int SW_RESTORE = 9;
+
+        private const uint WM_SHOWWINDOW = 0x0018;
+        private const uint WM_ACTIVATEAPP = 0x001C;
+
+
+        private const uint WM_SYSCOMMAND = 0x0112;
+        private const uint SC_RESTORE = 0xF120;
+        private const uint WM_SETREDRAW = 0x000B;
+
+        private const uint WM_SIZE = 0x0005;
+
+
+        private const uint WM_ACTIVATE = 0x0006;
+        private const uint WA_ACTIVE = 1;
+        private const uint WA_CLICKACTIVE = 2;
+
+
+        private const int SWP_NOMOVE = 0x0002;
+        private const int SWP_NOSIZE = 0x0001;
+
+        /// <summary>
+        /// アプリケーションのメイン エントリ ポイントです。
+        /// </summary>
+        [STAThread]
+        static void Main()
+        {
+            // ユニークなミューテックス名を設定
+            string mutexName = "PracticeProjMutex";
+            bool createdNew;
+
+            // ミューテックスを作成
+            using (Mutex mutex = new Mutex(true, mutexName, out createdNew))
+            {
+                //ミューテックスの初期所有権が付与されたか判定
+                if (createdNew)
+                {
+                    //メイン処理
+                    string sUri = System.IO.Path.GetFullPath(@"..\..\Html\TopMenu.html");
+                    string sPrepArg = "";
+                    Application.EnableVisualStyles();
+                    Application.SetCompatibleTextRenderingDefault(false);
+                    Application.Run(new FormMain(sUri, sPrepArg));
+                }
+                else
+                {
+                    //既存インスタンスを前面に設定
+                    BringExistingInstanceToFront();
+                }
+            }
+        }
+
+        //既存インスタンスを前面に設定
+        static void BringExistingInstanceToFront()
+        {
+            //現在のプロセスを取得
+            Process currentProcess = Process.GetCurrentProcess();
+            //同じ名前の他のプロセスを取得
+            Process[] Processes = Process.GetProcessesByName(currentProcess.ProcessName);
+            //同じ名前の他のプロセス数ループ
+            foreach (Process process in Processes)
+            {
+                //既存のプロセスか判定
+                if (process.Id != currentProcess.Id)
+                {
+                    //既存のプロセスのウィンドウハンドルを取得
+                    IntPtr handle = process.MainWindowHandle;
+                    //ウィンドウハンドルがゼロポインタではない
+                    if (handle != IntPtr.Zero)
+                    {
+                        //ウィンドウが最小化されている場合は復元
+                        if (IsIconic(handle))
+                        {
+                            ShowWindow(handle, SW_RESTORE);
+                        }
+                        // ウィンドウをフォアグラウンドに設定
+                        SetForegroundWindow(handle);
+
+
+
+
+
+
+                        
+                        // ウィンドウをアクティブにして再描画を強制
+                        PostMessage(handle, WM_SHOWWINDOW, new IntPtr(1), IntPtr.Zero);
+                        PostMessage(handle, WM_ACTIVATEAPP, new IntPtr(1), IntPtr.Zero);
+
+
+                        // ウィンドウの描画を無効にする
+                        SendMessage(handle, WM_SETREDRAW, new IntPtr(0), IntPtr.Zero);
+                        // 強制的にリサイズイベントを発生させる
+                        SendMessage(handle, WM_SYSCOMMAND, new IntPtr(SC_RESTORE), IntPtr.Zero);
+                        // ウィンドウの描画を再度有効にする
+                        SendMessage(handle, WM_SETREDRAW, new IntPtr(1), IntPtr.Zero);
+
+
+
+                        PostMessage(handle, WM_SHOWWINDOW, new IntPtr(1), IntPtr.Zero);
+                        PostMessage(handle, WM_ACTIVATEAPP, new IntPtr(1), IntPtr.Zero);
+
+
+                        // ウィンドウのリサイズイベントをシミュレートして再描画を強制
+                        PostMessage(handle, WM_SYSCOMMAND, new IntPtr(SC_RESTORE), IntPtr.Zero);
+                        PostMessage(handle, WM_SIZE, IntPtr.Zero, IntPtr.Zero);
+                        
+                        // 強制的に再描画
+                        // フォームの再描画
+                        SendMessage(handle, WM_SETREDRAW, new IntPtr(1), IntPtr.Zero);
+                        SendMessage(handle, 0x000F, IntPtr.Zero, IntPtr.Zero); // WM_PAINT
+
+
+                        // ウィンドウの再描画を強制
+                        SendMessage(handle, WM_ACTIVATE, new IntPtr(WA_ACTIVE), IntPtr.Zero);
+                        SendMessage(handle, WM_ACTIVATE, new IntPtr(WA_CLICKACTIVE), IntPtr.Zero);
+                        
+
+
+
+                        // ウィンドウのサイズをわずかに変更して再表示させる
+                        SetWindowPos(handle, IntPtr.Zero, 1, 0, 1, 0, SWP_NOMOVE | SWP_NOSIZE);
+
+                        //// ウィンドウの再描画を強制
+                        //InvalidateRect(handle, IntPtr.Zero, true);
+
+                        //// 強制的に再描画
+                        //// フォームの再描画を保証する
+                        //Application.OpenForms[0]?.Invoke((Action)(() =>
+                        //{
+                        //    Application.OpenForms[0].Refresh();
+                        //}));
+                        //
+                        //Application.OpenForms[0]?.Invoke((Action)(() =>
+                        //{
+                        //    Application.OpenForms[0].Update();
+                        //}));
+                        //
+                        //// ウィンドウの再描画を強制
+                        //Application.OpenForms[0]?.Invoke((Action)(() =>
+                        //{
+                        //    Application.OpenForms[0].Activate();
+                        //}));
+
+                    }
+                    break;
+                }
+            }
+        }
+
+
+
+
+    }
+}
