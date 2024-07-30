@@ -173,14 +173,11 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <None Include="ShapeFiles\ne_10m_coastline\ne_10m_coastline.cpg" />
-    <None Include="ShapeFiles\ne_10m_coastline\ne_10m_coastline.dbf" />
-    <None Include="ShapeFiles\ne_10m_coastline\ne_10m_coastline.shp" />
-    <None Include="ShapeFiles\ne_10m_coastline\ne_10m_coastline.shp.sidx" />
-    <None Include="ShapeFiles\ne_10m_coastline\ne_10m_coastline.shx" />
-    <None Include="ShapeFiles\polbnda_jpn\polbnda_jpn.dbf" />
-    <None Include="ShapeFiles\polbnda_jpn\polbnda_jpn.shp" />
-    <None Include="ShapeFiles\polbnda_jpn\polbnda_jpn.shx" />
+    <None Include="ShapeFiles\ne_10m_land\ne_10m_land.cpg" />
+    <None Include="ShapeFiles\ne_10m_land\ne_10m_land.dbf" />
+    <None Include="ShapeFiles\ne_10m_land\ne_10m_land.shp" />
+    <None Include="ShapeFiles\ne_10m_land\ne_10m_land.shp.sidx" />
+    <None Include="ShapeFiles\ne_10m_land\ne_10m_land.shx" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

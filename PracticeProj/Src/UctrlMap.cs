@@ -1,5 +1,8 @@
-﻿using GeoAPI.Geometries;
+﻿using GeoAPI.CoordinateSystems.Transformations;
+using GeoAPI.Geometries;
 using NetTopologySuite.Geometries;
+using ProjNet.CoordinateSystems;
+using ProjNet.CoordinateSystems.Transformations;
 using SharpMap;
 using SharpMap.Data.Providers;
 using SharpMap.Forms;
@@ -14,6 +17,9 @@ namespace PracticeProj
 {
     public partial class UctrlMap : UserControl
     {
+        ICoordinateTransformation transformation;
+        ICoordinateTransformation reverseTransformation;
+
         //コンストラクタ
         public UctrlMap()
         {
@@ -50,8 +56,8 @@ namespace PracticeProj
             this.InitializeBaseLayer();
 
             //Zoom制限
-            mapBox.Map.MinimumZoom = 0.1;
-            mapBox.Map.MaximumZoom = 360.0;
+            mapBox.Map.MinimumZoom = 0.1 * 1500000;
+            mapBox.Map.MaximumZoom = 360.0 * 1500000;
 
             //レイヤ全体を表示する(全レイヤの範囲にズームする)
             mapBox.Map.ZoomToExtents();
@@ -63,31 +69,125 @@ namespace PracticeProj
         //基底レイヤ初期化
         private void InitializeBaseLayer()
         {
-            //Map生成
-            mapBox.Map = new Map(new Size(mapBox.Width, mapBox.Height));
-            mapBox.Map.BackColor = System.Drawing.Color.LightBlue;
+            // メルカトル図法の座標系を定義
+            var geographicCS = GeographicCoordinateSystem.WGS84;
+            var mercatorCS = ProjectedCoordinateSystem.WebMercator;
+
+            // 座標変換ファクトリを作成
+            var transformFactory = new CoordinateTransformationFactory();
+            transformation = transformFactory.CreateFromCoordinateSystems(geographicCS, mercatorCS);
+            reverseTransformation = transformFactory.CreateFromCoordinateSystems(mercatorCS, geographicCS);
+
+            // SharpMapのマップオブジェクトを作成
+            var map = new Map(mapBox.Size)
+            {
+                BackColor = System.Drawing.Color.LightBlue,
+                SRID = 3857 // EPSG:3857はWebメルカトルのSRID
+            };
+
+            mapBox.Map = map;
+
+            //=================================================================
 
             //レイヤーの作成
             VectorLayer baseLayer = new VectorLayer("baseLayer");
-
             try
             {
-                baseLayer.DataSource = new ShapeFile(@"..\..\ShapeFiles\polbnda_jpn\polbnda_jpn.shp");
-                //baseLayer.DataSource = new ShapeFile(@"..\..\ShapeFiles\ne_10m_coastline\ne_10m_coastline.shp");
+                baseLayer.DataSource = new ShapeFile(@"..\..\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
             }
             catch//(Exception ex)
             {
-                //開発中はこっち（カレントディレクトリがWakeMap.slnの階層になる）
-                baseLayer.DataSource = new ShapeFile(@".\WakeMap\ShapeFiles\polbnda_jpn\polbnda_jpn.shp");
-                //baseLayer.DataSource = new ShapeFile(@".\WakeMap\ShapeFiles\ne_10m_coastline\ne_10m_coastline.shp");
+                //デザインタブで見るときはこっち（カレントディレクトリが***.slnの階層になる）
+                baseLayer.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp");//, true);
             }
+            baseLayer.SRID = 4326; // データソースのSRIDを設定
 
             baseLayer.Style.Fill = Brushes.LimeGreen;
             baseLayer.Style.Outline = Pens.Black;
             baseLayer.Style.EnableOutline = true;
 
+            // 座標変換を設定
+            baseLayer.CoordinateTransformation = transformation;
+            baseLayer.ReverseCoordinateTransformation = reverseTransformation;
+
             //マップにレイヤーを追加
             mapBox.Map.Layers.Add(baseLayer);
+
+            //=================================================================
+
+            // baseLayer2を作成して360度ずらす
+            //レイヤーの作成
+            VectorLayer baseLayer2 = new VectorLayer("baseLayer2");
+            try
+            {
+                baseLayer2.DataSource = new ShapeFile(@"..\..\ShapeFiles\ne_10m_land\ne_10m_land.shp");//, true);
+            }
+            catch//(Exception ex)
+            {
+                //デザインタブで見るときはこっち（カレントディレクトリが***.slnの階層になる）
+                baseLayer2.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
+            }
+
+            // baseLayer2の座標を360度シフト
+            var shiftedGeometries = baseLayer2.DataSource.GetGeometriesInView(baseLayer2.Envelope);
+            foreach (var geometry in shiftedGeometries)
+            {
+                foreach (var coordinate in geometry.Coordinates)
+                {
+                    coordinate.X -= 360; // 経度を360度ずらす
+                }
+            }
+
+            // スタイルを設定
+            baseLayer2.Style.Fill = Brushes.LightCoral;
+            baseLayer2.Style.Outline = Pens.Black;
+            baseLayer2.Style.EnableOutline = true;
+
+            // 座標変換を設定
+            baseLayer2.CoordinateTransformation = transformation;
+            baseLayer2.ReverseCoordinateTransformation = reverseTransformation;
+
+            // マップに追加
+            mapBox.Map.Layers.Add(baseLayer2);
+
+            //=================================================================
+
+            // baseLayer3を作成して360度ずらす
+            //レイヤーの作成
+            VectorLayer baseLayer3 = new VectorLayer("baseLayer3");
+            try
+            {
+                baseLayer3.DataSource = new ShapeFile(@"..\..\ShapeFiles\ne_10m_land\ne_10m_land.shp");//, true);
+            }
+            catch//(Exception ex)
+            {
+                //デザインタブで見るときはこっち（カレントディレクトリが***.slnの階層になる）
+                baseLayer3.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
+            }
+
+            // baseLayer3の座標を360度シフト
+            var shiftedGeometries3 = baseLayer3.DataSource.GetGeometriesInView(baseLayer3.Envelope);
+            foreach (var geometry in shiftedGeometries3)
+            {
+                foreach (var coordinate in geometry.Coordinates)
+                {
+                    coordinate.X += 360; // 経度を360度ずらす
+                }
+            }
+
+            // スタイルを設定
+            baseLayer3.Style.Fill = Brushes.LightSteelBlue;
+            baseLayer3.Style.Outline = Pens.Black;
+            baseLayer3.Style.EnableOutline = true;
+
+            // 座標変換を設定
+            baseLayer3.CoordinateTransformation = transformation;
+            baseLayer3.ReverseCoordinateTransformation = reverseTransformation;
+
+            // マップに追加
+            mapBox.Map.Layers.Add(baseLayer3);
+
+            //=================================================================
         }
 
         //再描画
@@ -102,8 +202,8 @@ namespace PracticeProj
         /// </summary>
         public void InitLayerOtherThanBase()
         {
-            //ベース(0番目)以外のレイヤ削除
-            while (mapBox.Map.Layers.Count > 1)
+            //ベース(0,1,2番目)以外のレイヤ削除
+            while (mapBox.Map.Layers.Count > 3)
             {
                 mapBox.Map.Layers.RemoveAt((mapBox.Map.Layers.Count - 1));
             }
