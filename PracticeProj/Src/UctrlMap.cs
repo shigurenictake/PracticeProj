@@ -28,6 +28,10 @@ namespace PracticeProj
 
             //SharpMap初期化
             this.InitializeMap();
+
+            //描画
+            Draw();
+
         }
 
         /// <summary>
@@ -90,28 +94,21 @@ namespace PracticeProj
             //=================================================================
 
             //レイヤーの作成
-            VectorLayer baseLayer = new VectorLayer("baseLayer");
+            VectorLayer baseLayer1 = new VectorLayer("baseLayer1");
             try
             {
-                baseLayer.DataSource = new ShapeFile(@"..\..\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
+                baseLayer1.DataSource = new ShapeFile(@"..\..\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
             }
             catch//(Exception ex)
             {
                 //デザインタブで見るときはこっち（カレントディレクトリが***.slnの階層になる）
-                baseLayer.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp");//, true);
+                baseLayer1.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp");//, true);
             }
-            baseLayer.SRID = 4326; // データソースのSRIDを設定
+            baseLayer1.SRID = 4326; // データソースのSRIDを設定
 
-            baseLayer.Style.Fill = Brushes.LimeGreen;
-            baseLayer.Style.Outline = Pens.Black;
-            baseLayer.Style.EnableOutline = true;
-
-            // 座標変換を設定
-            baseLayer.CoordinateTransformation = transformation;
-            baseLayer.ReverseCoordinateTransformation = reverseTransformation;
-
-            //マップにレイヤーを追加
-            mapBox.Map.Layers.Add(baseLayer);
+            baseLayer1.Style.Fill = Brushes.LimeGreen;
+            baseLayer1.Style.Outline = Pens.Black;
+            baseLayer1.Style.EnableOutline = true;
 
             //=================================================================
 
@@ -128,6 +125,11 @@ namespace PracticeProj
                 baseLayer2.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
             }
 
+            // スタイルを設定
+            baseLayer2.Style.Fill = Brushes.LightCoral;
+            baseLayer2.Style.Outline = Pens.Black;
+            baseLayer2.Style.EnableOutline = true;
+
             // baseLayer2の座標を360度シフト
             var shiftedGeometries = baseLayer2.DataSource.GetGeometriesInView(baseLayer2.Envelope);
             foreach (var geometry in shiftedGeometries)
@@ -137,18 +139,6 @@ namespace PracticeProj
                     coordinate.X -= 360; // 経度を360度ずらす
                 }
             }
-
-            // スタイルを設定
-            baseLayer2.Style.Fill = Brushes.LightCoral;
-            baseLayer2.Style.Outline = Pens.Black;
-            baseLayer2.Style.EnableOutline = true;
-
-            // 座標変換を設定
-            baseLayer2.CoordinateTransformation = transformation;
-            baseLayer2.ReverseCoordinateTransformation = reverseTransformation;
-
-            // マップに追加
-            mapBox.Map.Layers.Add(baseLayer2);
 
             //=================================================================
 
@@ -164,6 +154,10 @@ namespace PracticeProj
                 //デザインタブで見るときはこっち（カレントディレクトリが***.slnの階層になる）
                 baseLayer3.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
             }
+            // スタイルを設定
+            baseLayer3.Style.Fill = Brushes.LightSteelBlue;
+            baseLayer3.Style.Outline = Pens.Black;
+            baseLayer3.Style.EnableOutline = true;
 
             // baseLayer3の座標を360度シフト
             var shiftedGeometries3 = baseLayer3.DataSource.GetGeometriesInView(baseLayer3.Envelope);
@@ -175,19 +169,38 @@ namespace PracticeProj
                 }
             }
 
-            // スタイルを設定
-            baseLayer3.Style.Fill = Brushes.LightSteelBlue;
-            baseLayer3.Style.Outline = Pens.Black;
-            baseLayer3.Style.EnableOutline = true;
+            //=================================================================
+
+            var baseLayers = new LayerGroup("baseLayers");
+            baseLayers.Layers.Add(baseLayer1);
+            baseLayers.Layers.Add(baseLayer2);
+            baseLayers.Layers.Add(baseLayer3);
 
             // 座標変換を設定
-            baseLayer3.CoordinateTransformation = transformation;
-            baseLayer3.ReverseCoordinateTransformation = reverseTransformation;
+            baseLayers.CoordinateTransformation = transformation;
+            baseLayers.ReverseCoordinateTransformation = reverseTransformation;
 
             // マップに追加
-            mapBox.Map.Layers.Add(baseLayer3);
+            mapBox.Map.Layers.Add(baseLayers);
 
             //=================================================================
+        }
+
+        private void Draw()
+        {
+            Coordinate[] coords = new Coordinate[] {
+                new Coordinate(-170, 85),
+                new Coordinate(-175, 80),
+                new Coordinate(-165, 75),
+                new Coordinate( 179, 70),
+                new Coordinate(-179, 65),
+                new Coordinate( 180, 60),
+                new Coordinate(-180, 55),
+            };
+
+            GenerateLayer("LayerA");
+            AddLineToLayer("LayerA", coords, "テスト");
+            mapBox.Refresh();
         }
 
         //再描画
@@ -221,8 +234,14 @@ namespace PracticeProj
             //ジオメトリをレイヤに反映
             GeometryProvider gpro = new GeometryProvider(igeoms);
             layer.DataSource = gpro;
-            //layer.Style.PointColor = Brushes.Red;
-            //layer.Style.Line = new Pen(Color.DarkRed, 1.0f);
+            
+            layer.Style.PointColor = Brushes.Red;
+            layer.Style.Line = new Pen(Color.DarkRed, 1.0f);
+
+            // 座標変換を設定
+            layer.CoordinateTransformation = transformation;
+            layer.ReverseCoordinateTransformation = reverseTransformation;
+
             //レイヤをmapBoxに追加
             mapBox.Map.Layers.Add(layer);
         }
@@ -277,7 +296,7 @@ namespace PracticeProj
             //地図全体(経度-180～180, 緯度-90～90で囲まれる四角形)
             Collection<IGeometry> igeoms =
                 layer.DataSource.GetGeometriesInView(
-                    new GeoAPI.Geometries.Envelope(-180, 180, -90, 90)
+                    new GeoAPI.Geometries.Envelope(-540, 540, -90, 90)
                 );
             return igeoms;
 
@@ -315,6 +334,8 @@ namespace PracticeProj
         //ラインを追加
         public void AddLineToLayer(string layername, Coordinate[] coordinates, string userdata)
         {
+            CheckAndShiftCoordinates(ref coordinates);
+
             //レイヤ取得
             VectorLayer layer = GetVectorLayerByName(layername);
             //ジオメトリ取得
@@ -329,6 +350,38 @@ namespace PracticeProj
             //ジオメトリをレイヤに反映
             GeometryProvider gpro = new GeometryProvider(igeoms);
             layer.DataSource = gpro;
+        }
+
+        public static bool CheckAndShiftCoordinates(ref Coordinate[] coordinates)
+        {
+            bool containsCrossingPoints = false;
+
+            // 経度が ±180 度の範囲を跨ぐかチェック
+            for (int i = 0; i < coordinates.Length - 1; i++)
+            {
+                double currentLon = coordinates[i].X;
+                double nextLon = coordinates[i + 1].X;
+
+                if (Math.Abs(nextLon - currentLon) > 180)
+                {
+                    containsCrossingPoints = true;
+                    break;
+                }
+            }
+
+            // 跨ぐ点が含まれていた場合、経度が負の点を +360 度シフト
+            if (containsCrossingPoints)
+            {
+                for (int i = 0; i < coordinates.Length; i++)
+                {
+                    if (coordinates[i].X < 0)
+                    {
+                        coordinates[i].X += 360;
+                    }
+                }
+            }
+
+            return containsCrossingPoints;
         }
 
     }
