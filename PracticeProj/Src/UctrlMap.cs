@@ -94,108 +94,55 @@ namespace PracticeProj
             //=================================================================
 
             //レイヤーの作成
-            VectorLayer baseLayer1 = new VectorLayer("baseLayer1");
+            VectorLayer baseLayer = new VectorLayer("baseLayer");
             try
             {
-                baseLayer1.DataSource = new ShapeFile(@"..\..\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
+                baseLayer.DataSource = new ShapeFile(@"..\..\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
             }
             catch//(Exception ex)
             {
                 //デザインタブで見るときはこっち（カレントディレクトリが***.slnの階層になる）
-                baseLayer1.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp");//, true);
+                baseLayer.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp");//, true);
             }
-            baseLayer1.SRID = 4326; // データソースのSRIDを設定
+            baseLayer.SRID = 4326; // データソースのSRIDを設定
 
-            baseLayer1.Style.Fill = Brushes.LimeGreen;
-            baseLayer1.Style.Outline = Pens.Black;
-            baseLayer1.Style.EnableOutline = true;
+            baseLayer.Style.Fill = Brushes.LimeGreen;
+            baseLayer.Style.Outline = Pens.Black;
+            baseLayer.Style.EnableOutline = true;
 
             //=================================================================
-
-            // baseLayer2を作成して360度ずらす
-            //レイヤーの作成
-            VectorLayer baseLayer2 = new VectorLayer("baseLayer2");
-            try
-            {
-                baseLayer2.DataSource = new ShapeFile(@"..\..\ShapeFiles\ne_10m_land\ne_10m_land.shp");//, true);
-            }
-            catch//(Exception ex)
-            {
-                //デザインタブで見るときはこっち（カレントディレクトリが***.slnの階層になる）
-                baseLayer2.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
-            }
-
-            // スタイルを設定
-            baseLayer2.Style.Fill = Brushes.LightCoral;
-            baseLayer2.Style.Outline = Pens.Black;
-            baseLayer2.Style.EnableOutline = true;
-
-            // baseLayer2の座標を360度シフト
-            var shiftedGeometries = baseLayer2.DataSource.GetGeometriesInView(baseLayer2.Envelope);
-            foreach (var geometry in shiftedGeometries)
-            {
-                foreach (var coordinate in geometry.Coordinates)
-                {
-                    coordinate.X -= 360; // 経度を360度ずらす
-                }
-            }
-
-            //=================================================================
-
-            // baseLayer3を作成して360度ずらす
-            //レイヤーの作成
-            VectorLayer baseLayer3 = new VectorLayer("baseLayer3");
-            try
-            {
-                baseLayer3.DataSource = new ShapeFile(@"..\..\ShapeFiles\ne_10m_land\ne_10m_land.shp");//, true);
-            }
-            catch//(Exception ex)
-            {
-                //デザインタブで見るときはこっち（カレントディレクトリが***.slnの階層になる）
-                baseLayer3.DataSource = new ShapeFile(@".\PracticeProj\ShapeFiles\ne_10m_land\ne_10m_land.shp", true);
-            }
-            // スタイルを設定
-            baseLayer3.Style.Fill = Brushes.LightSteelBlue;
-            baseLayer3.Style.Outline = Pens.Black;
-            baseLayer3.Style.EnableOutline = true;
-
-            // baseLayer3の座標を360度シフト
-            var shiftedGeometries3 = baseLayer3.DataSource.GetGeometriesInView(baseLayer3.Envelope);
-            foreach (var geometry in shiftedGeometries3)
-            {
-                foreach (var coordinate in geometry.Coordinates)
-                {
-                    coordinate.X += 360; // 経度を360度ずらす
-                }
-            }
-
-            //=================================================================
-
-            var baseLayers = new LayerGroup("baseLayers");
-            baseLayers.Layers.Add(baseLayer1);
-            baseLayers.Layers.Add(baseLayer2);
-            baseLayers.Layers.Add(baseLayer3);
 
             // 座標変換を設定
-            baseLayers.CoordinateTransformation = transformation;
-            baseLayers.ReverseCoordinateTransformation = reverseTransformation;
+            baseLayer.CoordinateTransformation = transformation;
+            baseLayer.ReverseCoordinateTransformation = reverseTransformation;
 
             // マップに追加
-            mapBox.Map.Layers.Add(baseLayers);
+            mapBox.Map.Layers.Add(baseLayer);
 
             //=================================================================
         }
 
         private void Draw()
         {
-            Coordinate[] coords = new Coordinate[] {
-                new Coordinate(-170, 85),
+            //Coordinate[] coords = new Coordinate[] {
+            //    new Coordinate(-170, 85),
+            //    new Coordinate(-175, 80),
+            //    new Coordinate(-165, 75),
+            //    new Coordinate( 179, 70),
+            //    new Coordinate(-179, 65),
+            //    new Coordinate( 180, 60),
+            //    new Coordinate(-180, 55),
+            //};
+
+            Coordinate[] coords = new Coordinate[]
+            {
+                new Coordinate(-175, 85),
+                new Coordinate(-175, 85),
                 new Coordinate(-175, 80),
-                new Coordinate(-165, 75),
-                new Coordinate( 179, 70),
-                new Coordinate(-179, 65),
-                new Coordinate( 180, 60),
-                new Coordinate(-180, 55),
+                new Coordinate(179, 75),
+                new Coordinate(-179, 70),
+                new Coordinate(180, 65),
+                new Coordinate(-180, 60)
             };
 
             GenerateLayer("LayerA");
@@ -334,7 +281,7 @@ namespace PracticeProj
         //ラインを追加
         public void AddLineToLayer(string layername, Coordinate[] coordinates, string userdata)
         {
-            CheckAndShiftCoordinates(ref coordinates);
+            AdjustForLongitudeWrapWithMinimumBearingChange(ref coordinates);
 
             //レイヤ取得
             VectorLayer layer = GetVectorLayerByName(layername);
@@ -352,37 +299,84 @@ namespace PracticeProj
             layer.DataSource = gpro;
         }
 
-        public static bool CheckAndShiftCoordinates(ref Coordinate[] coordinates)
+
+        //▼=================================================================================
+
+        // 方位角を計算するヘルパーメソッド
+        private static double CalculateBearing(Coordinate start, Coordinate end)
         {
-            bool containsCrossingPoints = false;
+            double lat1 = DegToRad(start.Y);
+            double lat2 = DegToRad(end.Y);
+            double dLon = DegToRad(end.X - start.X);
 
-            // 経度が ±180 度の範囲を跨ぐかチェック
-            for (int i = 0; i < coordinates.Length - 1; i++)
+            double y = Math.Sin(dLon) * Math.Cos(lat2);
+            double x = Math.Cos(lat1) * Math.Sin(lat2) - Math.Sin(lat1) * Math.Cos(lat2) * Math.Cos(dLon);
+            double bearing = RadToDeg(Math.Atan2(y, x));
+            return (bearing + 360) % 360; // 0 <= bearing < 360
+        }
+
+        // 度からラジアンへの変換
+        private static double DegToRad(double degrees) => degrees * Math.PI / 180;
+
+        // ラジアンから度への変換
+        private static double RadToDeg(double radians) => radians * 180 / Math.PI;
+
+        // 方位角の差を計算するヘルパーメソッド
+        private static double BearingDifference(double bearing1, double bearing2)
+        {
+            double diff = Math.Abs(bearing1 - bearing2) % 360;
+            return diff > 180 ? 360 - diff : diff; // 0 <= difference <= 180
+        }
+
+        // 経度補正のためのメソッド
+        public static void AdjustForLongitudeWrapWithMinimumBearingChange(ref Coordinate[] coordinates)
+        {
+            // 過去の点が2つ以上必要
+            if (coordinates.Length < 3) return;
+
+            for (int i = 2; i < coordinates.Length - 1; i++)
             {
-                double currentLon = coordinates[i].X;
-                double nextLon = coordinates[i + 1].X;
+                // 方位角を計算
+                double currentBearing = CalculateBearing(coordinates[i - 2], coordinates[i - 1]);
+                double futureBearing = CalculateBearing(coordinates[i], coordinates[i + 1]);
 
-                if (Math.Abs(nextLon - currentLon) > 180)
-                {
-                    containsCrossingPoints = true;
-                    break;
-                }
-            }
+                // 経度の差を計算
+                double diff = coordinates[i + 1].X - coordinates[i].X;
 
-            // 跨ぐ点が含まれていた場合、経度が負の点を +360 度シフト
-            if (containsCrossingPoints)
-            {
-                for (int i = 0; i < coordinates.Length; i++)
+                // 経度が±180度を跨ぐ場合
+                if (Math.Abs(diff) > 180)
                 {
-                    if (coordinates[i].X < 0)
+                    // 変更前の方位角の変化量
+                    double originalChange = BearingDifference(currentBearing, futureBearing);
+
+                    // 経度を360度シフトする場合
+                    double shiftedChange;
+                    if (diff > 0)
                     {
-                        coordinates[i].X += 360;
+                        // +360度シフト
+                        var temp = coordinates[i + 1];
+                        temp.X += 360;
+                        shiftedChange = BearingDifference(currentBearing, CalculateBearing(coordinates[i], temp));
+                        if (shiftedChange < originalChange)
+                        {
+                            coordinates[i + 1].X += 360; // 採用
+                        }
+                    }
+                    else
+                    {
+                        // -360度シフト
+                        var temp = coordinates[i + 1];
+                        temp.X -= 360;
+                        shiftedChange = BearingDifference(currentBearing, CalculateBearing(coordinates[i], temp));
+                        if (shiftedChange < originalChange)
+                        {
+                            coordinates[i + 1].X -= 360; // 採用
+                        }
                     }
                 }
             }
-
-            return containsCrossingPoints;
         }
+        //▲=================================================================================
 
     }
 }
