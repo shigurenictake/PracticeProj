@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace PracticeProj
@@ -144,6 +145,8 @@ namespace PracticeProj
                 new Coordinate(180, 65),
                 new Coordinate(-180, 60)
             };
+
+            List<List<Coordinate>> LineList = new List<List<Coordinate>>();
 
             GenerateLayer("LayerA");
             AddLineToLayer("LayerA", coords, "テスト");
@@ -281,7 +284,7 @@ namespace PracticeProj
         //ラインを追加
         public void AddLineToLayer(string layername, Coordinate[] coordinates, string userdata)
         {
-            AdjustForLongitudeWrapWithMinimumBearingChange(ref coordinates);
+            ProcessCoordinates(coordinates);
 
             //レイヤ取得
             VectorLayer layer = GetVectorLayerByName(layername);
@@ -301,7 +304,6 @@ namespace PracticeProj
 
 
         //▼=================================================================================
-
         // 方位角を計算するヘルパーメソッド
         private static double CalculateBearing(Coordinate start, Coordinate end)
         {
@@ -328,54 +330,152 @@ namespace PracticeProj
             return diff > 180 ? 360 - diff : diff; // 0 <= difference <= 180
         }
 
-        // 経度補正のためのメソッド
-        public static void AdjustForLongitudeWrapWithMinimumBearingChange(ref Coordinate[] coordinates)
+        public static void ProcessCoordinates(Coordinate[] coords)
         {
-            // 過去の点が2つ以上必要
-            if (coordinates.Length < 3) return;
+            List<List<Coordinate>> LineList = new List<List<Coordinate>>();
+            int workLine = 0;
+            int nextLine = 1;
 
-            for (int i = 2; i < coordinates.Length - 1; i++)
+            // 初期化: 最初のラインを作成
+            LineList.Add(new List<Coordinate>());
+
+            for (int i = 0; i < coords.Length; i++)
             {
-                // 方位角を計算
-                double currentBearing = CalculateBearing(coordinates[i - 2], coordinates[i - 1]);
-                double futureBearing = CalculateBearing(coordinates[i], coordinates[i + 1]);
-
-                // 経度の差を計算
-                double diff = coordinates[i + 1].X - coordinates[i].X;
-
-                // 経度が±180度を跨ぐ場合
-                if (Math.Abs(diff) > 180)
+                if (i == 0)
                 {
-                    // 変更前の方位角の変化量
-                    double originalChange = BearingDifference(currentBearing, futureBearing);
+                    // 初回はそのまま追加
+                    LineList[workLine].Add(coords[i]);
 
-                    // 経度を360度シフトする場合
-                    double shiftedChange;
-                    if (diff > 0)
+                    // シフトラインの作成
+                    if (coords[i].X < 0)
                     {
-                        // +360度シフト
-                        var temp = coordinates[i + 1];
-                        temp.X += 360;
-                        shiftedChange = BearingDifference(currentBearing, CalculateBearing(coordinates[i], temp));
-                        if (shiftedChange < originalChange)
-                        {
-                            coordinates[i + 1].X += 360; // 採用
-                        }
+                        LineList.Add(new List<Coordinate> { new Coordinate(coords[i].X + 360, coords[i].Y) });
                     }
                     else
                     {
-                        // -360度シフト
-                        var temp = coordinates[i + 1];
-                        temp.X -= 360;
-                        shiftedChange = BearingDifference(currentBearing, CalculateBearing(coordinates[i], temp));
-                        if (shiftedChange < originalChange)
+                        LineList.Add(new List<Coordinate> { new Coordinate(coords[i].X - 360, coords[i].Y) });
+                    }
+                }
+                else if (i == 1)
+                {
+                    // 経度の差を計算
+                    double diff = coords[i].X - coords[i - 1].X;
+
+                    if (Math.Abs(diff) > 180)
+                    {
+                        if (diff > 0)
                         {
-                            coordinates[i + 1].X -= 360; // 採用
+                            coords[i].X += 360;
                         }
+                        else
+                        {
+                            coords[i].X -= 360;
+                        }
+                    }
+
+                    LineList[workLine].Add(coords[i]);
+
+                    // 跨ぎを処理
+                    if ((LineList[workLine][i - 1].X < 0 && coords[i].X >= 0) ||
+                        (LineList[workLine][i - 1].X >= 0 && coords[i].X < 0))
+                    {
+                        if (LineList[workLine][i - 1].X < 0 && coords[i].X >= 0)
+                        {
+                            LineList.Add(new List<Coordinate>
+                        {
+                            new Coordinate(LineList[workLine][i - 1].X + 360, LineList[workLine][i - 1].Y),
+                            new Coordinate(coords[i].X - 360, coords[i].Y)
+                        });
+                        }
+                        else
+                        {
+                            LineList.Add(new List<Coordinate>
+                        {
+                            new Coordinate(LineList[workLine][i - 1].X - 360, LineList[workLine][i - 1].Y),
+                            new Coordinate(coords[i].X + 360, coords[i].Y)
+                        });
+                        }
+                        nextLine++;
+                    }
+                }
+                else
+                {
+                    // 方位角を計算
+                    double currentBearing = CalculateBearing(LineList[workLine][i - 2], LineList[workLine][i - 1]);
+                    double futureBearing = CalculateBearing(LineList[workLine][i - 1], coords[i]);
+
+                    // 経度の差を計算
+                    double diff = coords[i].X - LineList[workLine][i - 1].X;
+
+                    // 経度が±180度を跨ぐ場合
+                    if (Math.Abs(diff) > 180)
+                    {
+                        double originalChange = BearingDifference(currentBearing, futureBearing);
+                        double shiftedChange;
+
+                        if (diff > 0)
+                        {
+                            // +360度シフト
+                            var temp = coords[i];
+                            temp.X += 360;
+                            shiftedChange = BearingDifference(currentBearing, CalculateBearing(LineList[workLine][i - 1], temp));
+                            if (shiftedChange < originalChange)
+                            {
+                                coords[i].X += 360;
+                            }
+                        }
+                        else
+                        {
+                            // -360度シフト
+                            var temp = coords[i];
+                            temp.X -= 360;
+                            shiftedChange = BearingDifference(currentBearing, CalculateBearing(LineList[workLine][i - 1], temp));
+                            if (shiftedChange < originalChange)
+                            {
+                                coords[i].X -= 360;
+                            }
+                        }
+                    }
+
+                    LineList[workLine].Add(coords[i]);
+
+                    // 跨ぎを処理
+                    if ((LineList[workLine][i - 1].X < 0 && coords[i].X >= 0) ||
+                        (LineList[workLine][i - 1].X >= 0 && coords[i].X < 0))
+                    {
+                        if (LineList[workLine][i - 1].X < 0 && coords[i].X >= 0)
+                        {
+                            LineList.Add(new List<Coordinate>
+                        {
+                            new Coordinate(LineList[workLine][i - 1].X + 360, LineList[workLine][i - 1].Y),
+                            new Coordinate(coords[i].X - 360, coords[i].Y)
+                        });
+                        }
+                        else
+                        {
+                            LineList.Add(new List<Coordinate>
+                        {
+                            new Coordinate(LineList[workLine][i - 1].X - 360, LineList[workLine][i - 1].Y),
+                            new Coordinate(coords[i].X + 360, coords[i].Y)
+                        });
+                        }
+                        workLine = nextLine;
+                        nextLine++;
                     }
                 }
             }
+
+            // 結果の表示
+            for (int j = 0; j < LineList.Count; j++)
+            {
+                Console.WriteLine($"Line {j + 1}:");
+                foreach (var coord in LineList[j])
+                {
+                    Console.WriteLine($"  {coord}");
+                }
+            }
         }
+
         //▲=================================================================================
 
     }

@@ -1,0 +1,111 @@
+
+2024/08/19
+
+ProcessCoordinates
+
+1.  地図上経度-180～+180の範囲を超えてしまったら、
+    反対側から新しいラインを作成し、続き表示する。
+    以下の方針で行う。
+
+1-1.複数のラインを管理するリストを宣言。
+    List<List<Coordinate>> LineList = new List<List<Coordinate>>();
+    
+1-2.LineListの中で終点が、X=-180～+180度の範囲内にあるLineListのインデックスをworkLineとする。
+    初期値 workLine = 0
+    LineList[workLine]と表す。
+    
+1-3.X=360シフトさせて表示するラインをnextLineとする。
+    nextLine = workLine + 1 とする。
+    LineList[nextLine]と表す。
+
+2.  インプットとなる座標配列（Coordinate[] coords）を基にループする（インデックス = i）
+
+    
+3.  i = 0 のとき （＝初回の時）
+
+    LineList[workLine][i]の設定する。
+
+    （ LineList[workLine][i].X < 0  ) ならば、LineList[workLine][i]を+360シフトしたList<Coordinate>を新しく生成し、LineListに追加。
+    （ 0 <= LineList[workLine][i].X ) ならば、LineList[workLine][i]を-360シフトしたList<Coordinate>を新しく生成し、LineListに追加。
+
+
+4.  i = 1 のとき （＝過去の点が2つ以上ではない時）　近い方向を採用する。
+
+4-1.// 経度の差を計算
+    double diff = LineList[workLine][i].X - LineList[workLine][i-1].X;
+    // 経度が±180度を跨ぐ場合
+    if (Math.Abs(diff) > 180){
+        if (diff > 0){
+            +360度シフトした座標を採用
+        }else{
+            -360度シフトした座標を採用
+        }
+    } else{
+        LineList[workLine][i]を設定する。
+    }
+    
+4-2.//X=0を跨いだ場合は、360シフトした位置にList<Coordinate>を新しく生成し、LineListに追加。及びnextLineを加算。
+    if
+    （ LineList[workLine][i-1].X < 0  ) かつ （ 0 <= LineList[workLine][i].X ) {
+        LineList[workLine][i-1],LineList[workLine][i] を-360シフトしたList<Coordinate>を新しく生成し、LineListに追加。
+        nextLine++;
+    } else if 
+    （ 0 <= LineList[workLine][i-1].X ) かつ （LineList[workLine][i].X < 0   ） {
+        LineList[workLine][i-1],LineList[workLine][i] を+360シフトしたList<Coordinate>を新しく生成し、LineListに追加。
+        nextLine++;
+    } else {
+        LineList[workLine][i-1]の続きを設定する
+        LineList[nextLine][i-1]の続きを設定する
+    }
+
+
+5.  2 =< i のとき （＝過去の点が2つ以上の時）
+
+5-1.// 方位角を計算
+    [i-2]～[i-1]の方位角
+    double currentBearing = CalculateBearing(LineList[workLine][i-2], LineList[workLine][i-1]);
+    double futureBearing = CalculateBearing(LineList[workLine][i-1], LineList[workLine][i]);
+
+    // 経度の差を計算
+    double diff = LineList[workLine][i].X - LineList[workLine][i-1].X;
+
+5-2.// 経度が±180度を跨ぐ場合
+    if (Math.Abs(diff) > 180)
+    {
+        // 変更前の方位角の変化量
+        ouble originalChange = BearingDifference(currentBearing, futureBearing);
+        
+5-2-1.  // 経度を360度シフトする場合
+        double shiftedChange;
+        if (diff > 0)
+        {
+             // +360度シフト
+             var temp = LineList[workLine][i];
+             temp.X += 360;
+             shiftedChange = BearingDifference(currentBearing, CalculateBearing(LineList[workLine][i-1], temp));
+             if (shiftedChange < originalChange)
+             {
+                 LineList[workLine][i].X += 360; // 採用
+             }
+         }
+         else
+         {
+             // -360度シフト
+             var temp = LineList[workLine][i];
+             temp.X -= 360;
+             shiftedChange = BearingDifference(currentBearing, CalculateBearing(LineList[workLine][i-1], temp));
+             if (shiftedChange < originalChange)
+             {
+                 LineList[workLine][i].X -= 360; // 採用
+             }
+         }
+     }
+
+5-3.//X=0を跨いだ場合は、360シフトした位置にList<Coordinate>を新しく生成し、LineListに追加。及びnextLineを加算。
+
+5-4.//X=±180を超えた場合は、
+    workLine = nextLine
+    nextLine = nextLine+1
+
+
+
