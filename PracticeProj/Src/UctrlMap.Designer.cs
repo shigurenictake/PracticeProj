@@ -67,6 +67,8 @@
             this.mapBox.TabIndex = 0;
             this.mapBox.Text = "mapBox1";
             this.mapBox.WheelZoomMagnitude = -2D;
+            this.mapBox.MapZoomChanged += new SharpMap.Forms.MapBox.MapZoomHandler(this.mapBox_MapZoomChanged);
+            this.mapBox.MapCenterChanged += new SharpMap.Forms.MapBox.MapCenterChangedHandler(this.mapBox_MapCenterChanged);
             // 
             // splitContainerUD
             // 

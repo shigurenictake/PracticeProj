@@ -69,6 +69,8 @@ namespace PracticeProj
 
             //mapBoxを再描画
             mapBox.Refresh();
+
+            mapBox.ActiveTool = MapBox.Tools.Pan; // パン（ドラッグで移動）ツールを有効にする
         }
 
         //基底レイヤ初期化
@@ -355,6 +357,8 @@ namespace PracticeProj
                     {
                         LineList.Add(new List<Coordinate> { new Coordinate(coords[i].X - 360, coords[i].Y) });
                     }
+
+                    continue;
                 }
                 else if (i == 1)
                 {
@@ -372,37 +376,14 @@ namespace PracticeProj
                             coords[i].X -= 360;
                         }
                     }
-
-                    LineList[workLine].Add(coords[i]);
-
-                    // 跨ぎを処理
-                    if ((LineList[workLine][i - 1].X < 0 && coords[i].X >= 0) ||
-                        (LineList[workLine][i - 1].X >= 0 && coords[i].X < 0))
-                    {
-                        if (LineList[workLine][i - 1].X < 0 && coords[i].X >= 0)
-                        {
-                            LineList.Add(new List<Coordinate>
-                        {
-                            new Coordinate(LineList[workLine][i - 1].X + 360, LineList[workLine][i - 1].Y),
-                            new Coordinate(coords[i].X - 360, coords[i].Y)
-                        });
-                        }
-                        else
-                        {
-                            LineList.Add(new List<Coordinate>
-                        {
-                            new Coordinate(LineList[workLine][i - 1].X - 360, LineList[workLine][i - 1].Y),
-                            new Coordinate(coords[i].X + 360, coords[i].Y)
-                        });
-                        }
-                        nextLine++;
-                    }
                 }
                 else
                 {
+                    int last = LineList[workLine].Count - 1;
+
                     // 方位角を計算
-                    double currentBearing = CalculateBearing(LineList[workLine][i - 2], LineList[workLine][i - 1]);
-                    double futureBearing = CalculateBearing(LineList[workLine][i - 1], coords[i]);
+                    double currentBearing = CalculateBearing(LineList[workLine][last - 1], LineList[workLine].Last());
+                    double futureBearing = CalculateBearing(LineList[workLine].Last(), coords[i]);
 
                     // 経度の差を計算
                     double diff = coords[i].X - LineList[workLine][i - 1].X;
@@ -436,32 +417,38 @@ namespace PracticeProj
                             }
                         }
                     }
+                }
 
-                    LineList[workLine].Add(coords[i]);
+                LineList[workLine].Add(coords[i]);
+                LineList[nextLine].Add(new Coordinate(coords[i].X+360, coords[i].Y) );
 
-                    // 跨ぎを処理
-                    if ((LineList[workLine][i - 1].X < 0 && coords[i].X >= 0) ||
-                        (LineList[workLine][i - 1].X >= 0 && coords[i].X < 0))
+                // 0跨ぎを処理
+                int workLast = LineList[workLine].Count - 1;
+                if ((LineList[workLine][workLast - 1].X < 0 && LineList[workLine].Last().X >= 0) ||
+                        (LineList[workLine][workLast - 1].X >= 0 && LineList[workLine].Last().X < 0))
+                {
+                    if ((LineList[workLine][workLast - 1].X < 0 && LineList[workLine].Last().X >= 0))
                     {
-                        if (LineList[workLine][i - 1].X < 0 && coords[i].X >= 0)
+                        LineList.Add(new List<Coordinate>
                         {
-                            LineList.Add(new List<Coordinate>
-                        {
-                            new Coordinate(LineList[workLine][i - 1].X + 360, LineList[workLine][i - 1].Y),
-                            new Coordinate(coords[i].X - 360, coords[i].Y)
+                            new Coordinate(LineList[workLine][workLast - 1].X - 360, LineList[workLine][workLast - 1].Y),
+                            new Coordinate(LineList[workLine].Last().X - 360, LineList[workLine].Last().Y)
                         });
-                        }
-                        else
-                        {
-                            LineList.Add(new List<Coordinate>
-                        {
-                            new Coordinate(LineList[workLine][i - 1].X - 360, LineList[workLine][i - 1].Y),
-                            new Coordinate(coords[i].X + 360, coords[i].Y)
-                        });
-                        }
-                        workLine = nextLine;
-                        nextLine++;
                     }
+                    else
+                    {
+                        LineList.Add(new List<Coordinate>
+                        {
+                            new Coordinate(LineList[workLine][workLast - 1].X + 360, LineList[workLine][workLast - 1].Y),
+                            new Coordinate(LineList[workLine].Last().X + 360, LineList[workLine].Last().Y)
+                        });
+                    }
+                    nextLine = LineList.Count-1;
+                }
+                else if ( Math.Abs( LineList[workLine].Last().X ) > 180 )
+                {
+                    workLine = nextLine;
+                    nextLine = LineList.Count - 1;
                 }
             }
 
@@ -477,6 +464,69 @@ namespace PracticeProj
         }
 
         //▲=================================================================================
+
+        //▼=================================================================================
+
+        private void GuardMapBounds()
+        {
+            // マップの中心の経度が -180 度から 180 度の範囲内にあるか確認
+            var transCenter = mapBox.Map.Center;
+            var center = reverseTransformation.MathTransform.Transform( transCenter );
+            var centerX = center.X;
+            if (centerX < -180)
+            {
+                centerX = -180;
+            }
+            else if (centerX > 180)
+            {
+                centerX = 180;
+            }
+            // クランプされた中心位置を設定
+            var clanpCenter = new Coordinate( centerX, center.Y);
+            mapBox.Map.Center = transformation.MathTransform.Transform(clanpCenter);
+
+
+            //// ズームアウト時に経度±180度を超えないように制限
+            //double maxAllowedZoomOut = 360.0 / mapBox.Map.Envelope.Width;
+            //if (mapBox.Map.Zoom > maxAllowedZoomOut)
+            //{
+            //    mapBox.Map.Zoom = maxAllowedZoomOut;
+            //}
+
+            // マップの表示範囲が経度±180度を超えないようにする
+            var envelope = mapBox.Map.Envelope;
+            // Envelope の角の座標を地理座標系に変換
+            var minCoord = reverseTransformation.MathTransform.Transform(new Coordinate(envelope.Min().X, envelope.Min().Y));
+            var maxCoord = reverseTransformation.MathTransform.Transform(new Coordinate(envelope.Max().X, envelope.Max().Y));
+            // 経度が ±180 度を超えないように制限
+            if (minCoord.X < -180)
+            {
+                minCoord.X = -180;
+            }
+            if (maxCoord.X > 180)
+            {
+                maxCoord.X = 180;
+            }
+            // クランプされた地理座標を再度投影座標に変換
+            var clampedMin = transformation.MathTransform.Transform(minCoord);
+            var clampedMax = transformation.MathTransform.Transform(maxCoord);
+            // クランプされたエンベロープを適用
+            var clampedEnvelope = new Envelope(clampedMin.X, clampedMax.X, envelope.Min().Y, envelope.Max().Y);
+            mapBox.Map.ZoomToBox(clampedEnvelope);
+        }
+
+        private void mapBox_MapZoomChanged(double zoom)
+        {
+            GuardMapBounds();
+        }
+
+        private void mapBox_MapCenterChanged(Coordinate center)
+        {
+            GuardMapBounds();
+        }
+
+        //▲=================================================================================
+
 
     }
 }
