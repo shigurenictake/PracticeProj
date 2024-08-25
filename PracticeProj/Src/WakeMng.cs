@@ -19,8 +19,8 @@ namespace PracticeProj.Src
     public class WakeMng
     {
         UctrlMap m_cUctrlMap; //地図操作オブジェクト
-        private Dictionary<string, Dictionary<string, Dictionary<string, string>>> g_dicAWake; //ディクショナリー
-        private Dictionary<string, Dictionary<string, Dictionary<string, string>>> g_dicSlctAWake; //ディクショナリー(時刻連動選択用)
+        //private Dictionary<string, Dictionary<string, Dictionary<string, string>>> g_dicAWake; //ディクショナリー
+        //private Dictionary<string, Dictionary<string, Dictionary<string, string>>> g_dicSlctAWake; //ディクショナリー(時刻連動選択用)
 
         //航跡のコンフィグ
         public class WakeCfg

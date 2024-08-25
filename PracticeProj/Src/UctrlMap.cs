@@ -12,6 +12,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
+using System.Timers;
 using System.Windows.Forms;
 
 namespace PracticeProj
@@ -20,6 +22,8 @@ namespace PracticeProj
     {
         ICoordinateTransformation transformation;
         ICoordinateTransformation reverseTransformation;
+
+        private static System.Timers.Timer _timer;
 
         //コンストラクタ
         public UctrlMap()
@@ -69,8 +73,6 @@ namespace PracticeProj
 
             //mapBoxを再描画
             mapBox.Refresh();
-
-            mapBox.ActiveTool = MapBox.Tools.Pan; // パン（ドラッグで移動）ツールを有効にする
         }
 
         //基底レイヤ初期化
@@ -473,16 +475,13 @@ namespace PracticeProj
             var transCenter = mapBox.Map.Center;
             var center = reverseTransformation.MathTransform.Transform( transCenter );
             var centerX = center.X;
-            if (centerX < -180)
-            {
-                centerX = -180;
-            }
-            else if (centerX > 180)
-            {
-                centerX = 180;
-            }
+            centerX = Math.Max( centerX, -180 );
+            centerX = Math.Min( centerX,  180 );
+            var centerY = center.Y;
+            centerY = Math.Max(centerY, -85);
+            centerY = Math.Min(centerY,  85);
             // クランプされた中心位置を設定
-            var clanpCenter = new Coordinate( centerX, center.Y);
+            var clanpCenter = new Coordinate( centerX, centerY);
             mapBox.Map.Center = transformation.MathTransform.Transform(clanpCenter);
 
 
@@ -493,26 +492,26 @@ namespace PracticeProj
             //    mapBox.Map.Zoom = maxAllowedZoomOut;
             //}
 
-            // マップの表示範囲が経度±180度を超えないようにする
-            var envelope = mapBox.Map.Envelope;
-            // Envelope の角の座標を地理座標系に変換
-            var minCoord = reverseTransformation.MathTransform.Transform(new Coordinate(envelope.Min().X, envelope.Min().Y));
-            var maxCoord = reverseTransformation.MathTransform.Transform(new Coordinate(envelope.Max().X, envelope.Max().Y));
-            // 経度が ±180 度を超えないように制限
-            if (minCoord.X < -180)
-            {
-                minCoord.X = -180;
-            }
-            if (maxCoord.X > 180)
-            {
-                maxCoord.X = 180;
-            }
-            // クランプされた地理座標を再度投影座標に変換
-            var clampedMin = transformation.MathTransform.Transform(minCoord);
-            var clampedMax = transformation.MathTransform.Transform(maxCoord);
-            // クランプされたエンベロープを適用
-            var clampedEnvelope = new Envelope(clampedMin.X, clampedMax.X, envelope.Min().Y, envelope.Max().Y);
-            mapBox.Map.ZoomToBox(clampedEnvelope);
+            //// マップの表示範囲が経度±180度を超えないようにする
+            //var envelope = mapBox.Map.Envelope;
+            //// Envelope の角の座標を地理座標系に変換
+            //var minCoord = reverseTransformation.MathTransform.Transform(new Coordinate(envelope.Min().X, envelope.Min().Y));
+            //var maxCoord = reverseTransformation.MathTransform.Transform(new Coordinate(envelope.Max().X, envelope.Max().Y));
+            //// 経度が ±180 度を超えないように制限
+            //if (minCoord.X < -180)
+            //{
+            //    minCoord.X = -180;
+            //}
+            //if (maxCoord.X > 180)
+            //{
+            //    maxCoord.X = 180;
+            //}
+            //// クランプされた地理座標を再度投影座標に変換
+            //var clampedMin = transformation.MathTransform.Transform(minCoord);
+            //var clampedMax = transformation.MathTransform.Transform(maxCoord);
+            //// クランプされたエンベロープを適用
+            //var clampedEnvelope = new Envelope(clampedMin.X, clampedMax.X, envelope.Min().Y, envelope.Max().Y);
+            //mapBox.Map.ZoomToBox(clampedEnvelope);
         }
 
         private void mapBox_MapZoomChanged(double zoom)
@@ -525,7 +524,21 @@ namespace PracticeProj
             GuardMapBounds();
         }
 
-        //▲=================================================================================
+        private void mapBox_MouseDown(Coordinate worldPos, MouseEventArgs imagePos)
+        {
+            mapBox.ActiveTool = MapBox.Tools.Pan;
+            this.textBox1.Text = mapBox.ActiveTool.ToString();
+        }
+        private void mapBox_MouseUp(Coordinate worldPos, MouseEventArgs imagePos)
+        {
+            mapBox.ActiveTool = MapBox.Tools.None;
+            mapBox.Refresh();
+            this.textBox1.Text = mapBox.ActiveTool.ToString();
+        }
+
+
+
+        //▲=============================6====================================================
 
 
     }

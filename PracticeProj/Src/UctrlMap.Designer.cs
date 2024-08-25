@@ -31,6 +31,7 @@
             this.pictureBoxLegend = new System.Windows.Forms.PictureBox();
             this.mapBox = new SharpMap.Forms.MapBox();
             this.splitContainerUD = new System.Windows.Forms.SplitContainer();
+            this.textBox1 = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxLegend)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainerUD)).BeginInit();
             this.splitContainerUD.Panel1.SuspendLayout();
@@ -67,6 +68,8 @@
             this.mapBox.TabIndex = 0;
             this.mapBox.Text = "mapBox1";
             this.mapBox.WheelZoomMagnitude = -2D;
+            this.mapBox.MouseDown += new SharpMap.Forms.MapBox.MouseEventHandler(this.mapBox_MouseDown);
+            this.mapBox.MouseUp += new SharpMap.Forms.MapBox.MouseEventHandler(this.mapBox_MouseUp);
             this.mapBox.MapZoomChanged += new SharpMap.Forms.MapBox.MapZoomHandler(this.mapBox_MapZoomChanged);
             this.mapBox.MapCenterChanged += new SharpMap.Forms.MapBox.MapCenterChangedHandler(this.mapBox_MapCenterChanged);
             // 
@@ -81,6 +84,7 @@
             // 
             // splitContainerUD.Panel1
             // 
+            this.splitContainerUD.Panel1.Controls.Add(this.textBox1);
             this.splitContainerUD.Panel1.Controls.Add(this.mapBox);
             // 
             // splitContainerUD.Panel2
@@ -90,6 +94,13 @@
             this.splitContainerUD.SplitterDistance = 399;
             this.splitContainerUD.SplitterWidth = 1;
             this.splitContainerUD.TabIndex = 1;
+            // 
+            // textBox1
+            // 
+            this.textBox1.Location = new System.Drawing.Point(3, 3);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(414, 19);
+            this.textBox1.TabIndex = 1;
             // 
             // UctrlMap
             // 
@@ -101,6 +112,7 @@
             this.Load += new System.EventHandler(this.UctrlMap_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxLegend)).EndInit();
             this.splitContainerUD.Panel1.ResumeLayout(false);
+            this.splitContainerUD.Panel1.PerformLayout();
             this.splitContainerUD.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainerUD)).EndInit();
             this.splitContainerUD.ResumeLayout(false);
@@ -113,5 +125,6 @@
         private System.Windows.Forms.PictureBox pictureBoxLegend;
         public SharpMap.Forms.MapBox mapBox;
         private System.Windows.Forms.SplitContainer splitContainerUD;
+        public System.Windows.Forms.TextBox textBox1;
     }
 }
