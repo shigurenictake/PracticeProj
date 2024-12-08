@@ -7,6 +7,7 @@ using SharpMap;
 using SharpMap.Data.Providers;
 using SharpMap.Forms;
 using SharpMap.Layers;
+using SharpMap.Rendering;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -48,6 +49,21 @@ namespace PracticeProj
         {
             // デザイン中は呼び出さない
             if (this.DesignMode) return;
+        }
+
+        public VectorLayer GetVectorLayerByName(MapBox mapBox, string layername)
+        {
+            VectorLayer retlayer = null;
+            LayerCollection layers = mapBox.Map.Layers;
+            foreach (VectorLayer layer in layers)
+            {
+                if (layer.LayerName == layername)
+                {
+                    retlayer = layer;
+                    break;
+                }
+            }
+            return retlayer;
         }
 
         /// <summary>
@@ -125,7 +141,11 @@ namespace PracticeProj
             mapBox.Map.Layers.Add(baseLayer);
 
             //=================================================================
+
+
         }
+
+
 
         private void Draw()
         {
